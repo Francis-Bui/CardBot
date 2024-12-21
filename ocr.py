@@ -60,6 +60,10 @@ def extract_g_value(image):
     for text in ocr_result:
         # Replace 'O' with '0' in the OCR text
         corrected_text = text.replace('O', '0')
+        corrected_text = corrected_text.replace('o', '0')
+        corrected_text = corrected_text.replace('i', '1')
+        corrected_text = corrected_text.replace('l', '1')
+        corrected_text = corrected_text.replace('I', '1')
 
         # Use regex to find the G value in the format "G###"
         match = re.search(r'G(\d{1,4})', corrected_text)
@@ -69,8 +73,9 @@ def extract_g_value(image):
                 print(f'Result: [ G{g_value} ]')
                 return g_value
 
-    # If no valid G value is found, return 2000
-    return 2000
+    # If no valid G value is found, return 9999
+    print('Result: [ Special ]')
+    return 9999
 
 # Function to save images at each processing step
 def save_image(image, filename):
@@ -124,8 +129,13 @@ def find_lowest_g_value(image_path):
     if valid_g_values:
         lowest_card = min(valid_g_values, key=valid_g_values.get)
         lowest_g_value = valid_g_values[lowest_card]
-        print(f"{lowest_card} has the lowest G value: G{lowest_g_value}")
-        return lowest_card, lowest_g_value
+        highest_card = max(valid_g_values, key=valid_g_values.get)
+        if valid_g_values[highest_card] == 9999 and lowest_g_value < 100:
+            print(f"{highest_card} was a special card.")
+            return highest_card, lowest_g_value
+        else:
+            print(f"{lowest_card} has the lowest G value: G{lowest_g_value}")
+            return lowest_card, lowest_g_value
     else:
         print("No valid G values found.")
         return None

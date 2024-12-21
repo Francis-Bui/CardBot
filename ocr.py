@@ -29,10 +29,15 @@ def split_image_into_cards(image):
     card_2 = image[:, width // 3:(2 * width) // 3]
     card_3 = image[:, (2 * width) // 3:]
 
-    return card_1, card_2, card_3
+    # Check if image height matches that of an image that contains an event card
+    if height == 603:
+        special_image = True
+    else:
+        special_image = False
+    return card_1, card_2, card_3, special_image
 
 # Function to crop the middle section where the G value is located
-def crop_middle_trim_edges(image, vertical_start_ratio=0.82, vertical_end_ratio=0.87, left_trim_ratio=0.05, right_trim_ratio=0.66):
+def crop_middle_trim_edges(image, vertical_start_ratio=0.82, vertical_end_ratio=0.87, left_trim_ratio=0.05, right_trim_ratio=0.64):
     height, width = image.shape[:2]
 
     top = int(height * vertical_start_ratio)
@@ -64,7 +69,6 @@ def extract_g_value(image):
         corrected_text = corrected_text.replace('i', '1')
         corrected_text = corrected_text.replace('l', '1')
         corrected_text = corrected_text.replace('I', '1')
-
         # Use regex to find the G value in the format "G###"
         match = re.search(r'G(\d{1,4})', corrected_text)
         if match:
@@ -90,12 +94,17 @@ def find_lowest_g_value(image_path):
         return None
 
     # Split the image into three cards
-    card_1, card_2, card_3 = split_image_into_cards(image)
+    card_1, card_2, card_3, special_image = split_image_into_cards(image)
 
-    # Crop the middle section of each card
-    card_1_cropped = crop_middle_trim_edges(card_1)
-    card_2_cropped = crop_middle_trim_edges(card_2)
-    card_3_cropped = crop_middle_trim_edges(card_3)
+    # Crop the middle section of each card depending on if it contains an event card
+    if special_image:
+        card_1_cropped = crop_middle_trim_edges(card_1, 0.77, 0.81, 0.13, 0.64)
+        card_2_cropped = crop_middle_trim_edges(card_2, 0.77, 0.81, 0.13, 0.64)
+        card_3_cropped = crop_middle_trim_edges(card_3, 0.77, 0.81, 0.13, 0.64)
+    else:
+        card_1_cropped = crop_middle_trim_edges(card_1)
+        card_2_cropped = crop_middle_trim_edges(card_2)
+        card_3_cropped = crop_middle_trim_edges(card_3)
 
     # Enlarge each cropped section for better OCR accuracy
     card_1_enlarged = enlarge_image(card_1_cropped)
@@ -130,7 +139,9 @@ def find_lowest_g_value(image_path):
         lowest_card = min(valid_g_values, key=valid_g_values.get)
         lowest_g_value = valid_g_values[lowest_card]
         highest_card = max(valid_g_values, key=valid_g_values.get)
-        if valid_g_values[highest_card] == 9999 and lowest_g_value < 100:
+        
+        # Check to see if there is a special card, cards with G<100 will still be prioritized
+        if valid_g_values[highest_card] == 9999 and lowest_g_value > 100:
             print(f"{highest_card} was a special card.")
             return highest_card, lowest_g_value
         else:
